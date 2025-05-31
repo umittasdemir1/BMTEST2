@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Stok ve Ürün Bilgisi - Düzeltilmiş</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<style>
+    body {
+      font-family: 'AvenirNext', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    
+    button,
+    label,
+    .button-group button {
+      font-family: 'AvenirNext', sans-serif;
+      font-size: 15px;
+      font-weight: normal;
+    }
+
+    @media (min-width: 768px) {
+      body {
+        
+      }
+    }
+    
+    header {
+      background-color: transparent;
+      padding-top: 20px;
+      text-align: center;
+      background-color: transparent;
+      padding: 32px 16px 24px 16px;
+    }
+    
+    header img {
+      max-width: 280px;
+    }
+    
+    .qr-box {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    
+    .qr-box img {
+      width: 60px;
+      margin-bottom: 12px;
+    }
+    
+    .qr-btns {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .qr-btns button, .qr-btns label {
+      flex: 1 1 45%;
+      padding: 12px;
+      font-size: 15px;
+      background: #E0E0E0;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+    }
+    
+    .qr-btns button,
+    .qr-btns label,
+    input[type="text"],
+    .button-group button {
+      width: 100%;
+      padding: 12px;
+      font-size: 15px;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    .qr-btns input[type="file"] {
+      display: none;
+    }
+    
+    #closeBtn {
+      display: none;
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 999;
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: transparent;
+      padding: 0;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #reader {
+      display: none;
+      width: 100%;
+      max-width: 360px;
+      height: 240px;
+      margin: 16px auto;
+      border-radius: 0;
+      position: relative;
+      background-color: #000;
+      overflow: hidden;
+      /* Mobil için transform fix */
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+    }
+
+    /* OVERLAY CONTAINER - Kamera video'sunun üstünde kalacak */
+    .camera-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    /* DÜZELTILMIŞ OVERLAY STIL */
+    .overlay-dark {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 4;
+    }
+
+    .mask-layer {
+      position: absolute;
+      top: 25%;
+      left: 25%;
+      width: 50%;
+      height: 50%;
+      z-index: 5;
+      pointer-events: none;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Custom frame kare boyutları %50 genişlik, %50 yükseklik */
+    .custom-frame {
+      position: absolute;
+      top: 25%;
+      left: 25%;
+      width: 50%;
+      height: 50%;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Köşe işaretleri */
+    .corner {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border: 2px solid #ffffff;
+      border-radius: 0;
+    }
+
+    .top-left {
+      top: -2px;
+      left: -2px;
+      border-right: none;
+      border-bottom: none;
+    }
+
+    .top-right {
+      top: -2px;
+      right: -2px;
+      border-left: none;
+      border-bottom: none;
+    }
+
+    .bottom-left {
+      bottom: -2px;
+      left: -2px;
+      border-right: none;
+      border-top: none;
+    }
+
+    .bottom-right {
+      bottom: -2px;
+      right: -2px;
+      border-left: none;
+      border-top: none;
+    }
+
+    /* Tarama çizgisi animasyonu */
+    .scan-line {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: white;animation: scan 2s ease-in-out infinite;
+      z-index: 15;
+    }
+
+    @keyframes scan {
+      0% { top: 0; opacity: 1; }
+      50% { opacity: 1; }
+      100% { top: calc(100% - 2px); opacity: 0; }
+    }
+    
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .button-group button {
+      flex: 1;
+      padding: 12px;
+      background: #E0E0E0;
+      font-size: 15px;
+      font-weight: normal;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    
+    #result {
+      text-align: left;
+      margin-top: 20px;
+      font-size: 16px;
+    }
+  
+    main {
+      max-width: 360px;
+      margin-top: 40px;
+      margin: 30px auto;
+      padding: 20px;
+      background-color: rgba(255,255,255,0.6);
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      main {
+        max-width: 260px;
+        margin-top: 20px;
+        padding: 16px;
+        margin: 20px auto;
+      }
+    }
+  
+    body::before {
+      content: "";
+      background-image: url('https://images.pexels.com/photos/1974521/pexels-photo-1974521.jpeg');
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+      opacity: 1;
+      pointer-events: none;
+    }
+</style>
+</head>
+<body>
+<header>
+<img alt="Bluemint Logo" src="bluemint_white_text_only.png" style="max-width: 360px;"/>
+</header>
+<main>
+<h2>Stok ve Ürün Bilgisi</h2>
+<div class="qr-box">
+<img alt="QR Scan Icon" src="https://cdn-icons-png.flaticon.com/512/8250/8250041.png"/>
+<div class="qr-btns">
+<button onclick="startScanner()">Scan</button>
+<label for="fileInput">Upload</label>
+<input accept="image/*" id="fileInput" type="file"/>
+<button id="closeBtn" onclick="stopScanner()">
+<img alt="Kapat" src="https://cdn-icons-png.flaticon.com/512/463/463612.png" style="width: 20px; height: 20px;"/>
+</button>
+</div>
+<div id="reader-container" style="position: relative; width: 100%; max-width: 300px; margin: 0 auto;">
+  <div id="reader"></div>
+</div>
+<input id="manualInput" maxlength="13" placeholder="Barkodu elle girin" type="text"/>
+<div class="button-group">
+<button onclick="manualSearch()">Search</button>
+<button onclick="clearInput()">Clear</button>
+</div>
+<div id="result"></div>
+<div style="margin-top: 20px;">
+  <input type="text" id="urunAdi" placeholder="Ürün Adı" style="display:none;">
+  <input type="text" id="kategori" placeholder="Kategori" style="display:none;">
+  <input type="text" id="renk" placeholder="Renk" style="display:none;">
+</div>
+
+<div id="imageResult" style="margin-top: 16px;"></div>
+
+</main>
+<script>
+    let html5QrCode;
+    let isCameraActive = false;
+    let products = [];
+    let lastScannedCode = "";
+    let lastScannedTime = 0;
+
+    function getImage() {
+      const urunAdi = document.getElementById("urunAdi").value.trim();
+      const renk = document.getElementById("renk").value.trim();
+      const match = products.find(p =>
+        p["Ürün Adı"]?.toLowerCase().trim() === urunAdi.toLowerCase().trim() &&
+        p["Renk Açıklaması"]?.toLowerCase().trim() === renk.toLowerCase().trim()
+      );
+
+      const kategori = document.getElementById("kategori").value.trim();
+
+      if (!urunAdi || !renk || !kategori) {
+        document.getElementById("imageResult").innerHTML = "<span style='color:red;'>Lütfen tüm alanları doldurun.</span>";
+        return;
+      }
+
+      fetch("http://localhost:5000/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ urun_adi: urunAdi, renk: renk, kategori: kategori })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.image_url && data.image_url !== "Bulunamadı") {
+            document.getElementById("imageResult").innerHTML = `<img src="${data.image_url}" style="width: 100%; max-width: 100%; height: auto; border-radius: 8px; margin-top: 12px;">`;
+          } else {
+            document.getElementById("imageResult").innerHTML = "<span style='color:red;'>Görsel bulunamadı.</span>";
+          }
+        })
+        .catch(() => {
+          document.getElementById("imageResult").innerHTML = "<span style='color:red;'>Sunucu hatası oluştu.</span>";
+        });
+    }
+
+    fetch("https://raw.githubusercontent.com/umittasdemir1/BMStock_CategoryDesc/refs/heads/main/cleaned_stock_data.json")
+      .then(res => res.json())
+      .then(data => products = data);
+
+    function showResult(code) {
+      const clean = code.trim();
+      const now = Date.now();
+      if (clean === lastScannedCode && now - lastScannedTime < 2000) return;
+      lastScannedCode = clean;
+      lastScannedTime = now;
+      const resultDiv = document.getElementById("result");
+      const match = products.find(p => p["Barkod"].trim() === clean);
+      document.getElementById("manualInput").value = clean;
+      const beep = document.getElementById("beepSound");
+      if (beep) {
+        beep.currentTime = 0;
+        beep.play().catch(e => console.warn("Ses çalınamadı:", e));
+      }
+      if (!/^[0-9]{13}$/.test(clean)) {
+        resultDiv.innerHTML = "<span style='color:red;'>⚠️ Barkod 13 haneli olmalıdır.</span>";
+        return;
+      }
+      
+      if (match) {
+        document.getElementById("urunAdi").value = match["Ürün Adı"] || "";
+        document.getElementById("renk").value = match["Renk Açıklaması"] || "";
+        document.getElementById("kategori").value = match["Kategori"] || "";
+        
+        // Resmi otomatik getir
+        setTimeout(() => getImage(), 100);
+      }
+
+      resultDiv.innerHTML = match
+        ? `<strong>Ürün Kodu:</strong> ${match["Ürün Kodu"]}<br>
+           <strong>Ürün Adı:</strong> ${match["Ürün Adı"]}<br>
+           <strong>Renk:</strong> ${match["Renk Açıklaması"]}<br>
+           <strong>Beden:</strong> ${match["Beden"]}<br>
+           <strong>Envanter:</strong> ${match["Envanter"]} Adet`
+        : `<span style='color:red;'>Barkod bulunamadı: ${clean}</span>`;
+    }
+
+    async function selectMainBackCamera() {
+        try {
+            const cameras = await Html5Qrcode.getCameras();
+            if (!cameras.length) return null;
+
+            const backCams = cameras.filter(cam => {
+                const l = cam.label?.toLowerCase() || "";
+                const i = cam.id?.toLowerCase() || "";
+                return l.includes("back") || i.includes("back") || l.includes("rear") || i.includes("rear");
+            });
+
+            backCams.sort((a, b) => {
+                const p = l => l.includes("0") ? 0 : l.includes("1") ? 1 : l.includes("2") ? 2 : 3;
+                return p(a.label) - p(b.label);
+            });
+
+            return backCams[0] || cameras[0];
+        } catch (err) {
+            console.error("Kamera seçilemedi:", err);
+            return null;
+        }
+    }
+
+    async function startScanner() {
+        const reader = document.getElementById("reader");
+        
+        // Reader'ı göster
+        reader.style.display = "block";
+        document.getElementById("closeBtn").style.display = "flex";
+        reader.scrollIntoView({ behavior: "smooth" });
+
+        if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+
+        try {
+            const selectedCamera = await selectMainBackCamera();
+            if (!selectedCamera) return;
+
+            const config = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.77778,
+                experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+                showScanRegion: false,
+                videoConstraints: {
+                    deviceId: selectedCamera.id,
+                    facingMode: { exact: "environment" }
+                }
+            };
+
+            // Kamerayı başlat
+            await html5QrCode.start(
+                { deviceId: selectedCamera.id },
+                config,
+                decoded => {
+                    if (/^[0-9]{13}$/.test(decoded)) {
+                        showResult(decoded);
+                        setTimeout(() => stopScanner(), 1500);
+                    }
+                }
+            );
+            
+            isCameraActive = true;
+            
+            // Overlay'i kamera video'sunun üstüne ekle - mobil için daha uzun bekleme
+            setTimeout(() => {
+                addOverlayToVideo();
+            }, 1000);
+            
+        } catch (err) {
+            console.error("Kamera başlatılamadı:", err);
+        }
+    }
+
+    function addOverlayToVideo() {
+        const reader = document.getElementById("reader");
+        
+        // Eğer overlay zaten varsa, ekleme
+        if (reader.querySelector('.camera-overlay')) {
+            return;
+        }
+        
+        // Mobil için daha güçlü overlay ekleme
+        const overlayHTML = `
+            <div class="camera-overlay" style="
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                z-index: 9999 !important;
+                pointer-events: none !important;
+                display: block !important;
+            ">
+                <div class="mask-layer" style="
+                    position: absolute !important;
+                    top: 25% !important;
+                    left: 25% !important;
+                    width: 50% !important;
+                    height: 50% !important;
+                    z-index: 5 !important;
+                    pointer-events: none !important;
+                    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7) !important;
+                "></div>
+                <div class="custom-frame" style="
+                    position: absolute !important;
+                    top: 25% !important;
+                    left: 25% !important;
+                    width: 50% !important;
+                    height: 50% !important;
+                    z-index: 10 !important;
+                    pointer-events: none !important;
+                ">
+                    <span class="corner top-left" style="
+                        position: absolute !important;
+                        width: 24px !important;
+                        height: 24px !important;
+                        border: 2px solid #ffffff !important;
+                        border-radius: 0 !important;
+                        top: -2px !important;
+                        left: -2px !important;
+                        border-right: none !important;
+                        border-bottom: none !important;
+                    "></span>
+                    <span class="corner top-right" style="
+                        position: absolute !important;
+                        width: 24px !important;
+                        height: 24px !important;
+                        border: 2px solid #ffffff !important;
+                        border-radius: 0 !important;
+                        top: -2px !important;
+                        right: -2px !important;
+                        border-left: none !important;
+                        border-bottom: none !important;
+                    "></span>
+                    <span class="corner bottom-left" style="
+                        position: absolute !important;
+                        width: 24px !important;
+                        height: 24px !important;
+                        border: 2px solid #ffffff !important;
+                        border-radius: 0 !important;
+                        bottom: -2px !important;
+                        left: -2px !important;
+                        border-right: none !important;
+                        border-top: none !important;
+                    "></span>
+                    <span class="corner bottom-right" style="
+                        position: absolute !important;
+                        width: 24px !important;
+                        height: 24px !important;
+                        border: 2px solid #ffffff !important;
+                        border-radius: 0 !important;
+                        bottom: -2px !important;
+                        right: -2px !important;
+                        border-left: none !important;
+                        border-top: none !important;
+                    "></span>
+                    <div class="scan-line" style="
+                        position: absolute !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        right: 0 !important;
+                        height: 2px !important;
+                        background: linear-gradient(90deg, transparent, #fff, transparent) !important;
+                        animation: scan 2s ease-in-out infinite !important;
+                        z-index: 15 !important;
+                    "></div>
+                </div>
+            </div>
+        `;
+        
+        reader.insertAdjacentHTML('beforeend', overlayHTML);
+        
+        // Mobil için ekstra kontrol
+        setTimeout(() => {
+            const overlay = reader.querySelector('.camera-overlay');
+            if (overlay) {
+                // Force display
+                overlay.style.setProperty('display', 'block', 'important');
+                overlay.style.setProperty('position', 'absolute', 'important');
+                overlay.style.setProperty('z-index', '9999', 'important');
+                
+                console.log('Overlay eklendi:', overlay);
+            }
+        }, 100);
+    }
+
+    async function stopScanner() {
+      const reader = document.getElementById("reader");
+      
+      if (html5QrCode && isCameraActive) {
+        await html5QrCode.stop();
+        await html5QrCode.clear();
+        isCameraActive = false;
+      }
+      
+      // Overlay'i temizle
+      const overlay = reader.querySelector('.camera-overlay');
+      if (overlay) {
+        overlay.remove();
+      }
+      
+      reader.style.display = "none";
+      document.getElementById("closeBtn").style.display = "none";
+    }
+
+    async function scanFromFile(input) {
+      const reader = document.getElementById("reader");
+      if (isCameraActive) await stopScanner();
+      reader.style.display = "none";
+      document.getElementById("closeBtn").style.display = "none";
+      const file = input.files[0];
+      if (!file) return;
+      if (isCameraActive) await stopScanner();
+      if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+
+      try {
+        const result = await html5QrCode.scanFile(file, true);
+        if (/^[0-9]{13}$/.test(result)) {
+          showResult(result);
+        }
+      } catch {
+        document.getElementById("result").innerText = "Dosyadan barkod okunamadı.";
+      }
+
+      input.value = null;
+    }
+
+    document.getElementById("fileInput").addEventListener("change", function () {
+      scanFromFile(this);
+    });
+
+    function manualSearch() {
+      showResult(document.getElementById("manualInput").value);
+    }
+
+    function clearInput() {
+      document.getElementById("manualInput").value = '';
+      document.getElementById("result").innerHTML = '';
+      document.getElementById("imageResult").innerHTML = '';
+      document.getElementById("urunAdi").value = '';
+      document.getElementById("renk").value = '';
+    }
+
+    document.getElementById("manualInput").addEventListener("input", function () {
+      if (this.value.length > 13) this.value = this.value.slice(0, 13);
+      if (this.value.length === 13) {
+        showResult(this.value);
+      }
+    });
+
+</script>
+<audio id="beepSound" preload="auto" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+<audio id="errorSound" preload="auto" src="https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg"></audio>
+</body>
+</html>
