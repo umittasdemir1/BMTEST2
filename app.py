@@ -1,7 +1,7 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 import requests
 import re
-import os
+import pyodbc
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -16,36 +16,52 @@ def slugify(text):
         .replace(" ", "-")
     )
 
-@app.route("/", methods=["POST"])
-def get_image():
-    data = request.get_json()
-    urun_adi = data.get("urun_adi")
-    renk = data.get("renk")
-    kategori = data.get("kategori")
+def get_sql_connection():
+    return pyodbc.connect(
+        "DRIVER={ODBC Driver 17 for SQL Server};"
+        "SERVER=localhost\\SQLEXPRESS;"
+        "DATABASE=BMStock;"
+        "Trusted_Connection=yes;"
+    )
 
-    slug_url = f"https://www.bluemint.com/tr/{slugify(urun_adi)}-{slugify(renk)}-{slugify(kategori)}/"
-    headers = {"User-Agent": "Mozilla/5.0"}
+@app.route("/", methods=["POST"])
+def get_image_by_barkod():
+    data = request.get_json()
+    barkod = data.get("barkod")
+
+    if not barkod:
+        return jsonify({"error": "Barkod eksik"})
 
     try:
+        conn = get_sql_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT UrunAdi, Renk, Kategori
+            FROM Products
+            WHERE Barkod = ?
+        """, barkod)
+        row = cursor.fetchone()
+
+        if not row:
+            return jsonify({"image_url": "Bulunamadı", "error": "Ürün bulunamadı"})
+
+        urun_adi, renk, kategori = row
+        slug_url = f"https://www.bluemint.com/tr/{slugify(urun_adi)}-{slugify(renk)}-{slugify(kategori)}/"
+        headers = {"User-Agent": "Mozilla/5.0"}
+
         res = requests.get(slug_url, headers=headers)
         html = res.text
         match = re.search(r'<meta property="og:image" content="([^"]+)"', html)
+
         if match:
             return jsonify({"image_url": match.group(1)})
         else:
             return jsonify({"image_url": "Bulunamadı"})
+
     except Exception as e:
         return jsonify({"image_url": "Hata", "error": str(e)})
 
 @app.route("/", methods=["GET"])
 def home():
-    return "✅ Sunucu çalışıyor. POST isteği gönderin."
+    return "✅ Sunucu çalışıyor. POST isteğiyle barkod gönderin."
 
-@app.route("/ui")
-def serve_ui():
-    return send_from_directory(".", "index.html")
-
-# 🚀 Render uyumlu şekilde çalıştır
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
