@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import requests
 import re
-import pyodbc
-from flask_cors import CORS
+import pymssql
 
 app = Flask(__name__)
 CORS(app)
@@ -17,11 +17,11 @@ def slugify(text):
     )
 
 def get_sql_connection():
-    return pyodbc.connect(
-        "DRIVER={ODBC Driver 17 for SQL Server};"
-        "SERVER=localhost\\SQLEXPRESS;"
-        "DATABASE=BMStock;"
-        "Trusted_Connection=yes;"
+    return pymssql.connect(
+        server="localhost\\SQLEXPRESS",  # Render'da çalışacaksa dış SQL'e bağlanacak adres olmalı
+        user="",                         # SQL kullanıcı adı (gerekiyorsa)
+        password="",                     # SQL şifresi (gerekiyorsa)
+        database="BMStock"
     )
 
 @app.route("/", methods=["POST"])
@@ -38,8 +38,8 @@ def get_image_by_barkod():
         cursor.execute("""
             SELECT UrunAdi, Renk, Kategori
             FROM Products
-            WHERE Barkod = ?
-        """, barkod)
+            WHERE Barkod = %s
+        """, (barkod,))
         row = cursor.fetchone()
 
         if not row:
@@ -63,5 +63,4 @@ def get_image_by_barkod():
 
 @app.route("/", methods=["GET"])
 def home():
-    return "✅ Sunucu çalışıyor. POST isteğiyle barkod gönderin."
-
+    return "✅ Sunucu çalışıyor. POST ile barkod gönderin."
